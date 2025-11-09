@@ -85,3 +85,5 @@ reports
 .sonar_lock
 report-task.txt
 eslint-report.json
+.http
+.env.json
