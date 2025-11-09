@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>ПостКамень AI Чат</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f2f2;
+            max-width: 600px;
+            margin: auto;
+        }
+        h1 {
+            font-size: 1.5em;
+            text-align: center;
+        }
+        #messages {
+            margin-bottom: 1rem;
+        }
+        .msg {
+            background: #fff;
+            padding: 12px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            word-wrap: break-word;
+            font-size: 1em;
+        }
+        .bot { background: #e3f2fd; }
+        .user { background: #d1ffd1; text-align: right; }
+
+        .typing {
+            display: inline-block;
+            width: 24px;
+            height: 10px;
+            text-align: center;
+        }
+        .typing span {
+            display: inline-block;
+            width: 6px;
+            height: 6px;
+            margin: 0 1px;
+            background: #999;
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes blink {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 14px;
+            font-size: 1em;
+            box-sizing: border-box;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+<h1>ПостКамень AI Чат</h1>
+<div id="messages">
+    <div class="msg bot">
+        <p>Здравствуйте.</p>
+        <p>Я — виртуальный консультант компании <strong>«Посткамень»</strong>. Мы создаём не просто памятники, а подлинные произведения мемориального искусства. Уже более 20 лет мы работаем в Беларуси, имеем собственное производство полного цикла и подходим к каждому заказу с вниманием и уважением.</p>
+
+        <p>Вы можете задать любой вопрос, например:</p>
+        <ul>
+            <li><em>Ищу памятник мужчине в форме креста, недорогой</em></li>
+            <li><em>Нужен эксклюзивный памятник с двойной стелой из чёрного гранита</em></li>
+        </ul>
+
+        <p>Я постараюсь подобрать несколько вариантов и помочь с выбором.</p>
+
+        <p>
+            📞 <a href="tel:+375296911400">+375 (29) 6-911-400</a><br>
+            🏛 г. Минск, ул. Кальварийская 33 — приходите, мы всегда рады лично подсказать и показать примеры работ.
+        </p>
+    </div>
+</div>
+
+<form id="chat-form" style="display: flex; gap: 8px; align-items: center; margin-top: 1rem;">
+    <input type="text" id="user-input" placeholder="Введите запрос..." style="flex-grow: 1;">
+    <button type="submit" id="send-btn" style="padding: 10px; font-size: 1.2em; background: #0077cc; color: white; border: none; border-radius: 50%; cursor: pointer;">
+        ➤
+    </button>
+</form>
+
+<script>
+    const apiUrl = 'https://eigz06aga9.execute-api.eu-central-1.amazonaws.com/prod/chat/';
+    const apiKey = 'L4LO5ClT5daJKmrSf2utA2cqiZlhkpKD3VrCQ1WR';
+
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('user-input');
+    const messages = document.getElementById('messages');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userMessage = input.value.trim();
+        if (!userMessage) return;
+
+        addMessage(userMessage, 'user');
+        input.value = '';
+
+        const typingDiv = showTyping();
+
+        try {
+            const res = await fetch(apiUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'text/plain',
+                    'x-api-key': apiKey,
+                },
+                body: userMessage,
+            });
+
+            const reply = await res.text();
+            removeTyping(typingDiv);
+            addMessage(reply, 'bot');
+        } catch (err) {
+            removeTyping(typingDiv);
+            addMessage('Ошибка при соединении с сервером.', 'bot');
+        }
+    });
+
+    function showTyping() {
+        const div = document.createElement('div');
+        div.className = 'msg bot';
+        div.innerHTML = `<div class="typing"><span></span><span></span><span></span></div>`;
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+        return div;
+    }
+
+    function removeTyping(div) {
+        if (div && div.parentNode) {
+            div.parentNode.removeChild(div);
+        }
+    }
+
+    function makeLinksClickable(text) {
+        return text.replace(/(https?:\/\/[^\s)>"']+?\.html)\b/g, '<a href="$1" target="_blank">$1</a>');
+    }
+
+    function addMessage(text, sender) {
+        const div = document.createElement('div');
+        div.className = `msg ${sender}`;
+        div.innerHTML = makeLinksClickable(text);
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    }
+</script>
+</body>
+</html>
+
+

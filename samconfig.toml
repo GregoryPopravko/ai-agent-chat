@@ -1,0 +1,15 @@
+version = 0.1
+
+[default.deploy.parameters]
+stack_name = "poststone-chat-backend"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-ohvr67fb8x2f"
+region = "eu-central-1"
+capabilities = ["CAPABILITY_IAM"]
+confirm_changeset = false
+fail_on_empty_changeset = false
+parameter_overrides = [
+    "OpenAIKey=dd",
+    "QdrantURL=dd",
+    "QdrantColletion=gravestones",
+    "QdrantAPIKey=ddd"
+]

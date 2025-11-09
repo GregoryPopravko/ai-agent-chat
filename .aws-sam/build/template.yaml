@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: poststone-chat
+Parameters:
+  OpenAIKey:
+    Type: String
+  QdrantURL:
+    Type: String
+  QdrantColletion:
+    Type: String
+  QdrantAPIKey:
+    Type: String
+Resources:
+  ChatLogsBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: poststone-chat-logs-${AWS::AccountId}-${AWS::Region}
+      LifecycleConfiguration:
+        Rules:
+        - Id: DeleteOldLogs
+          Status: Enabled
+          ExpirationInDays: 30
+  PostStoneChatFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: PostStoneChatFunction
+      Handler: bin
+      Runtime: provided.al2
+      MemorySize: 128
+      Timeout: 30
+      Events:
+        OptionsEvent:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: OPTIONS
+            RestApiId:
+              Ref: PostStoneChatRestApi
+            Auth:
+              ApiKeyRequired: false
+        CatchAll:
+          Type: Api
+          Properties:
+            Path: /chat
+            Method: POST
+            RestApiId:
+              Ref: PostStoneChatRestApi
+            Auth:
+              ApiKeyRequired: true
+      Policies:
+      - AWSLambdaBasicExecutionRole
+      - S3WritePolicy:
+          BucketName:
+            Fn::Sub: poststone-chat-logs-${AWS::AccountId}-${AWS::Region}
+      - Statement:
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          - s3:ListBucket
+          Resource:
+          - Fn::Sub: arn:aws:s3:::poststone-chat-logs-${AWS::AccountId}-${AWS::Region}
+          - Fn::Sub: arn:aws:s3:::poststone-chat-logs-${AWS::AccountId}-${AWS::Region}/*
+      Environment:
+        Variables:
+          OPENAI_API_KEY:
+            Ref: OpenAIKey
+          QDRANT_URL:
+            Ref: QdrantURL
+          QDRANT_COLLECTION:
+            Ref: QdrantColletion
+          QDRANT_API_KEY:
+            Ref: QdrantAPIKey
+    Metadata:
+      SamResourceId: PostStoneChatFunction
+  PostStoneChatRestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: prod
+      Auth:
+        ApiKeyRequired: true
+      Cors:
+        AllowOrigin:
+        - '*'
+        AllowHeaders:
+        - content-type
+        - x-amz-date
+        - authorization
+        - x-api-key
+        - x-amz-security-token
+        AllowMethods:
+        - HEAD
+        - OPTIONS
+        - POST
+  ApiKey:
+    Type: AWS::ApiGateway::ApiKey
+    Properties:
+      Name: PostStoneChatApiKey
+      Enabled: true
+  UsagePlan:
+    Type: AWS::ApiGateway::UsagePlan
+    Properties:
+      UsagePlanName: PostStoneChatUsagePlan
+      ApiStages:
+      - ApiId:
+          Ref: PostStoneChatRestApi
+        Stage: prod
+      Throttle:
+        RateLimit: 1
+        BurstLimit: 2
+  UsagePlanKey:
+    Type: AWS::ApiGateway::UsagePlanKey
+    Properties:
+      KeyId:
+        Ref: ApiKey
+      KeyType: API_KEY
+      UsagePlanId:
+        Ref: UsagePlan
+Outputs:
+  PostStoneChatAPI:
+    Description: API Gateway endpoint URL for PostStone Chat
+    Value:
+      Fn::Sub: https://${PostStoneChatRestApi}.execute-api.${AWS::Region}.amazonaws.com/chat/
